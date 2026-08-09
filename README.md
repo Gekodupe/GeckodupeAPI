@@ -1,8 +1,6 @@
 # Geckodupe API
 
-Open-source Cloudflare Worker powering [Geckodupe](https://github.com/Gekodupe/Gekodupe) — hosted spam scoring, event idempotency, accounts, API keys, and billing.
-
-**Repo:** [Gekodupe/GeckodupeAPI](https://github.com/Gekodupe/GeckodupeAPI) · **Org:** [Gekodupe](https://github.com/orgs/Gekodupe)
+Open-source Cloudflare Worker powering [Geckodupe](https://github.com/Gekodupe/Gekodupe): hosted spam scoring, event idempotency, accounts, API keys, and billing.
 
 Flareform calls this Worker via `GECKODUPE_SPAM_URL` (see [FlareformAPI](https://github.com/Gekodupe/FlareformAPI)).
 
@@ -78,4 +76,4 @@ npm install geckodupe
 
 ## License
 
-GPL-3.0-or-later — see [LICENSE](./LICENSE).
+GPL-3.0-or-later. See [LICENSE](./LICENSE).
