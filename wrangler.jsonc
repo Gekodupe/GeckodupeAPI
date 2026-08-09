@@ -1,0 +1,35 @@
+/**
+ * Geckodupe API Worker
+ * Deploy: npx wrangler deploy (from this directory)
+ *
+ * Worker name stays `geckodupe-spam` so the live URL and Flareform
+ * GECKODUPE_SPAM_URL binding remain stable.
+ */
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "geckodupe-spam",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "kv_namespaces": [
+    {
+      "binding": "GECKODUPE_SPAM",
+      "id": "d7f1cf328aa2499a9f052a2e0b0112b5",
+      "preview_id": "f1ac4d944ef64548b8b11d6652dfecd1"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "SPAM_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ]
+}

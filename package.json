@@ -1,0 +1,24 @@
+{
+  "name": "@geckodupe/api",
+  "version": "0.1.0",
+  "description": "Geckodupe API - Cloudflare Worker for spam scoring, events idempotency, accounts, and billing",
+  "homepage": "https://github.com/Gekodupe/GeckodupeAPI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gekodupe/GeckodupeAPI.git"
+  },
+  "license": "GPL-3.0-or-later",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250801.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.119.0"
+  }
+}

@@ -1,0 +1,12 @@
+# Geckodupe API local secrets — copy to .dev.vars
+APP_ORIGIN=http://127.0.0.1:4173
+CORS_ORIGINS=http://127.0.0.1:4173,http://localhost:4173,https://gekodupe.github.io
+# ALLOW_OPEN_API=1
+# API_KEYS=
+# BREVO_API_KEY=
+# BREVO_SENDER_EMAIL=
+# BREVO_SENDER_NAME=Geckodupe
+# TURNSTILE_SECRET=
+# STRIPE_SECRET_KEY=
+# STRIPE_WEBHOOK_SECRET=
+# STRIPE_PRICE_IDS=
