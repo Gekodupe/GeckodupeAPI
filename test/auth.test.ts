@@ -46,7 +46,39 @@ describe('auth', () => {
     assert.equal(r.ok, true);
     if (r.ok) {
       assert.equal(r.tenant, tenantIdFromKey('secret-key'));
+      assert.equal(r.via, 'static');
       assert.equal(extractBearerToken(req), 'secret-key');
     }
+  });
+});
+
+describe('client spam opts', () => {
+  it('ignores attempts to disable detectors or inject fingerprints', async () => {
+    const { sanitizeClientSpamOpts, spamDefaultOpts } = await import('../src/lib/spam-engine.ts');
+    const clamped = sanitizeClientSpamOpts({
+      detectBait: false,
+      detectUrlFlood: false,
+      blockScore: 0.01,
+      recentFingerprints: [{ fingerprint: 'x' }],
+      mode: 'list',
+      maxUrls: 99
+    });
+    assert.equal((clamped as any).detectBait, undefined);
+    assert.equal((clamped as any).recentFingerprints, undefined);
+    const o = spamDefaultOpts(clamped);
+    assert.equal(o.detectBait, true);
+    assert.equal(o.detectUrlFlood, true);
+    assert.equal(o.mode, 'list');
+    assert.equal(o.blockScore >= 0.5, true);
+    assert.equal(o.maxUrls, 20);
+    assert.deepEqual(o.recentFingerprints, []);
+  });
+});
+
+describe('service quota plan', () => {
+  it('maps static keys to service plan limits', async () => {
+    const { PLANS } = await import('../src/lib/plans.ts');
+    assert.ok(PLANS.service.limits.apiRequestsPerDay > 0);
+    assert.equal(PLANS.guest.limits.apiRequestsPerDay, 0);
   });
 });

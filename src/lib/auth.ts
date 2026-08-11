@@ -30,6 +30,7 @@ export function extractBearerToken(request: Request): string {
 
 /** Stable tenant id from API key (never store raw keys in KV paths). */
 export function tenantIdFromKey(token: string): string {
+  // Sync FNV kept for backward-compatible KV partitions of existing keys
   const s = token || 'anonymous';
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {
@@ -39,7 +40,14 @@ export function tenantIdFromKey(token: string): string {
   return 't' + (h >>> 0).toString(16);
 }
 
-export type AuthOk = { ok: true; token: string; tenant: string; email?: string };
+export type AuthOk = {
+  ok: true;
+  token: string;
+  tenant: string;
+  email?: string;
+  /** Issued account key vs env API_KEYS service key */
+  via: 'static' | 'issued' | 'open';
+};
 export type AuthFail = { ok: false; error: string };
 
 export async function requireApiKey(request: Request, env: Env): Promise<AuthOk | AuthFail> {
@@ -47,7 +55,7 @@ export async function requireApiKey(request: Request, env: Env): Promise<AuthOk 
   const staticKeys = parseApiKeys(env.API_KEYS);
 
   if (token && staticKeys.has(token)) {
-    return { ok: true, token, tenant: tenantIdFromKey(token) };
+    return { ok: true, token, tenant: tenantIdFromKey(token), via: 'static' };
   }
 
   if (token && token.indexOf('gd_') === 0) {
@@ -62,7 +70,8 @@ export async function requireApiKey(request: Request, env: Env): Promise<AuthOk 
           ok: true,
           token,
           tenant: tenantIdFromKey(token),
-          email: meta.email
+          email: meta.email,
+          via: 'issued'
         };
       }
     } catch {
@@ -73,7 +82,7 @@ export async function requireApiKey(request: Request, env: Env): Promise<AuthOk 
   // Open demo only when explicitly enabled (never default in production)
   if (staticKeys.size === 0 && (env.ALLOW_OPEN_API === '1' || env.ALLOW_OPEN_API === 'true')) {
     const effective = token || 'dev';
-    return { ok: true, token: effective, tenant: tenantIdFromKey(effective) };
+    return { ok: true, token: effective, tenant: tenantIdFromKey(effective), via: 'open' };
   }
 
   if (!token) return { ok: false, error: 'Unauthorized' };

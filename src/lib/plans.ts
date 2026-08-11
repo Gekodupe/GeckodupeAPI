@@ -1,4 +1,4 @@
-export type PlanId = 'guest' | 'free' | 'starter' | 'pro' | 'business';
+export type PlanId = 'guest' | 'free' | 'starter' | 'pro' | 'business' | 'service';
 
 export interface PlanLimits {
   apiRequestsPerDay: number;
@@ -37,6 +37,23 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       spamRunsPerDay: 5
     },
     features: ['Local normalize & dedupe', 'Soft daily caps', 'Subscribe to Basic for API keys']
+  },
+  service: {
+    id: 'service',
+    name: 'Service',
+    priceMonthly: 0,
+    blurb: 'Server-to-server keys from API_KEYS env.',
+    limits: {
+      apiRequestsPerDay: 500000,
+      maxKeys: 0,
+      textMaxLines: 500000,
+      textRunsPerDay: 5000,
+      folderMaxFiles: 25000,
+      mediaMaxFiles: 10000,
+      spamMaxLines: 500000,
+      spamRunsPerDay: 5000
+    },
+    features: ['High volume for trusted service keys']
   },
   free: {
     id: 'free',
@@ -89,7 +106,6 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     },
     features: ['200k API requests / day', '10 API keys', 'Burst memory', 'Checkout portal']
   },
-  // Kept for existing Stripe subscriptions; not shown in Pricing UI
   business: {
     id: 'business',
     name: 'Business',
@@ -111,36 +127,39 @@ export const PLANS: Record<PlanId, PlanInfo> = {
 
 export const PUBLIC_PLAN_IDS: PlanId[] = ['free', 'starter', 'pro'];
 
+/** Price IDs from STRIPE_PRICE_IDS only — never hardcode live Stripe prices. */
 export function parsePriceIds(raw: string | undefined): Record<string, string> {
-  const defaults = {
-    free: 'price_1U1eRCGrsdJU1djqi8mF21Fw',
-    starter: 'price_1U1dxXGrsdJU1djqpVvONZKS',
-    pro: 'price_1U1dxZGrsdJU1djqZaZ3dTdL',
-    business: 'price_1U1dxbGrsdJU1djqptRwdqEM'
-  };
-  if (!raw) return defaults;
+  const empty = { free: '', starter: '', pro: '', business: '' };
+  if (!raw) return empty;
   try {
     const obj = JSON.parse(raw) as Record<string, string>;
     return {
-      free: obj.free || defaults.free,
-      starter: obj.starter || defaults.starter,
-      pro: obj.pro || defaults.pro,
-      business: obj.business || defaults.business
+      free: String(obj.free || ''),
+      starter: String(obj.starter || ''),
+      pro: String(obj.pro || ''),
+      business: String(obj.business || '')
     };
   } catch {
-    return defaults;
+    return empty;
   }
 }
 
 export function planFromPriceId(priceId: string, priceMap: Record<string, string>): PlanId {
   for (const [plan, id] of Object.entries(priceMap)) {
-    if (id === priceId) return plan as PlanId;
+    if (id && id === priceId) return plan as PlanId;
   }
   return 'free';
 }
 
 export function normalizePlan(plan: string | undefined | null): PlanId {
-  if (plan === 'starter' || plan === 'pro' || plan === 'business' || plan === 'free' || plan === 'guest') {
+  if (
+    plan === 'starter' ||
+    plan === 'pro' ||
+    plan === 'business' ||
+    plan === 'free' ||
+    plan === 'guest' ||
+    plan === 'service'
+  ) {
     return plan;
   }
   return 'free';

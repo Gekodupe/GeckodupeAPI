@@ -1,4 +1,4 @@
-import { cleanText, scorePayload, spamDefaultOpts, type SpamOpts, type SpamScoreResult } from '../lib/spam-engine';
+import { cleanText, scorePayload, spamDefaultOpts, sanitizeClientSpamOpts, type SpamOpts, type SpamScoreResult } from '../lib/spam-engine';
 import { requireApiKey, type AuthOk } from '../lib/auth';
 import { jsonResponse } from '../lib/cors';
 import type { Env } from '../lib/env';
@@ -25,8 +25,9 @@ async function applyRateLimit(env: Env, request: Request, auth?: AuthOk): Promis
   try {
     const r = await env.SPAM_RATE_LIMITER.limit({ key: clientKey(request, auth) });
     return r.success;
-  } catch {
-    return true;
+  } catch (err) {
+    console.error('Geckodupe rate limit error', err);
+    return false;
   }
 }
 
@@ -43,8 +44,7 @@ function emit(env: Env, blobs: string[], doubles?: number[]) {
 }
 
 function parseOptions(body: Record<string, unknown>): Partial<SpamOpts> {
-  const raw = (body.options || body.opts || {}) as Partial<SpamOpts> & { blocklist?: string | string[] };
-  return spamDefaultOpts(raw);
+  return spamDefaultOpts(sanitizeClientSpamOpts(body.options || body.opts));
 }
 
 async function readRecent(
@@ -77,8 +77,6 @@ async function readBlocklist(env: Env, tenant: string): Promise<string[]> {
   try {
     const scoped = (await env.GECKODUPE_SPAM.get(`blocklist:${tenant}`, 'json')) as string[] | null;
     if (Array.isArray(scoped)) return scoped;
-    const legacy = (await env.GECKODUPE_SPAM.get('blocklist', 'json')) as string[] | null;
-    if (Array.isArray(legacy)) return legacy;
   } catch {
     /* empty */
   }
@@ -99,7 +97,8 @@ export async function handleSpamRoutes(request: Request, env: Env, path: string)
   const quota = await enforceApiQuota(env, {
     tenant: auth.tenant,
     email: auth.email,
-    plan: auth.email ? undefined : 'guest'
+    via: auth.via,
+    plan: auth.via === 'static' ? 'service' : auth.email ? undefined : 'guest'
   });
   if (!quota.ok) {
     emit(env, ['quota', path, auth.tenant, quota.plan]);
@@ -222,7 +221,7 @@ export async function handleSpamRoutes(request: Request, env: Env, path: string)
       duplicate: burst,
       detail: burst ? 'burst' : 'ok'
     });
-    return jsonResponse({ score, cleaned: cleaned.cleaned, burst, turnstile }, 200, request);
+    return jsonResponse({ score, cleaned: cleaned.cleaned, burst, turnstile: { ok: !!turnstile.ok } }, 200, request);
   }
 
   return jsonResponse({ error: 'Not found' }, 404, request);

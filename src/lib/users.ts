@@ -66,10 +66,12 @@ export async function getUsageHistory(
 
 export async function enforceApiQuota(
   env: Env,
-  opts: { tenant: string; email?: string; plan?: PlanId }
+  opts: { tenant: string; email?: string; plan?: PlanId; via?: string }
 ): Promise<{ ok: true; used: number; limit: number; plan: PlanId } | { ok: false; error: string; status: number; plan: PlanId; used: number; limit: number }> {
   let plan: PlanId = opts.plan || 'guest';
-  if (opts.email) {
+  if (opts.via === 'static') {
+    plan = 'service';
+  } else if (opts.email) {
     const user = await getUser(env, opts.email);
     plan = userPlan(user);
   }

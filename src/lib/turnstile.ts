@@ -3,7 +3,7 @@ export async function verifyTurnstile(
   secret: string | undefined,
   ip?: string | null
 ): Promise<{ ok: boolean; reason?: string }> {
-  if (!secret) return { ok: true }; // optional
+  if (!secret) return { ok: true }; // optional when not configured
   if (!token) return { ok: false, reason: 'missing_turnstile' };
   try {
     const body = new URLSearchParams();
@@ -17,8 +17,9 @@ export async function verifyTurnstile(
     const data = (await res.json()) as { success?: boolean };
     if (!data.success) return { ok: false, reason: 'turnstile_failed' };
     return { ok: true };
-  } catch {
-    // Fail open on Turnstile outage
-    return { ok: true, reason: 'turnstile_unavailable' };
+  } catch (err) {
+    console.error('Turnstile verify error', err);
+    // Fail closed when Turnstile is configured but unreachable
+    return { ok: false, reason: 'turnstile_unavailable' };
   }
 }

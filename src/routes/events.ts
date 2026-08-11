@@ -1,4 +1,4 @@
-import { scorePayload, spamDefaultOpts, type SpamOpts } from '../lib/spam-engine';
+import { scorePayload, spamDefaultOpts, sanitizeClientSpamOpts, type SpamOpts } from '../lib/spam-engine';
 import { requireApiKey, type AuthOk } from '../lib/auth';
 import { jsonResponse } from '../lib/cors';
 import type { Env } from '../lib/env';
@@ -15,8 +15,9 @@ async function applyRateLimit(env: Env, auth: AuthOk): Promise<boolean> {
   try {
     const r = await env.SPAM_RATE_LIMITER.limit({ key: rateKey(auth) });
     return r.success;
-  } catch {
-    return true;
+  } catch (err) {
+    console.error('Geckodupe events rate limit error', err);
+    return false;
   }
 }
 
@@ -47,8 +48,7 @@ async function pushRecent(
 }
 
 function parseOptions(body: Record<string, unknown>): Partial<SpamOpts> {
-  const raw = (body.options || body.opts || {}) as Partial<SpamOpts>;
-  return spamDefaultOpts(raw);
+  return spamDefaultOpts(sanitizeClientSpamOpts(body.options || body.opts));
 }
 
 /**
@@ -68,7 +68,8 @@ export async function handleEventRoutes(request: Request, env: Env, path: string
   const quota = await enforceApiQuota(env, {
     tenant: auth.tenant,
     email: auth.email,
-    plan: auth.email ? undefined : 'guest'
+    via: auth.via,
+    plan: auth.via === 'static' ? 'service' : auth.email ? undefined : 'guest'
   });
   if (!quota.ok) {
     return jsonResponse(
@@ -123,6 +124,9 @@ export async function handleEventRoutes(request: Request, env: Env, path: string
       await env.GECKODUPE_SPAM.put(idKey, score.fingerprint, {
         expirationTtl: Math.max(60, Math.ceil(windowMs / 1000))
       });
+      // Re-read: if another writer won the race with a different value, treat as duplicate
+      const after = await env.GECKODUPE_SPAM.get(idKey);
+      if (after && after !== score.fingerprint) duplicate = true;
     }
   }
 

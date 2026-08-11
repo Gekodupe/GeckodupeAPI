@@ -102,6 +102,44 @@ export function spamDefaultOpts(overrides?: Partial<SpamOpts>): SpamOpts {
   return o;
 }
 
+/** Clamp untrusted client options — never disable detectors or inject fingerprints. */
+export function sanitizeClientSpamOpts(raw: unknown): Partial<SpamOpts> {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const out: Partial<SpamOpts> = {};
+  if (src.mode === 'form' || src.mode === 'list' || src.mode === 'log') out.mode = src.mode;
+  if (typeof src.simThreshold === 'number' && Number.isFinite(src.simThreshold)) {
+    out.simThreshold = Math.min(0.99, Math.max(0.5, src.simThreshold));
+  }
+  if (typeof src.blockScore === 'number' && Number.isFinite(src.blockScore)) {
+    out.blockScore = Math.min(0.99, Math.max(0.5, src.blockScore));
+  }
+  if (typeof src.softScore === 'number' && Number.isFinite(src.softScore)) {
+    out.softScore = Math.min(0.95, Math.max(0.1, src.softScore));
+  }
+  if (typeof src.burstWindowMs === 'number' && Number.isFinite(src.burstWindowMs)) {
+    out.burstWindowMs = Math.min(600000, Math.max(10000, Math.floor(src.burstWindowMs)));
+  }
+  if (typeof src.maxUrls === 'number' && Number.isFinite(src.maxUrls)) {
+    out.maxUrls = Math.min(20, Math.max(1, Math.floor(src.maxUrls)));
+  }
+  if (typeof src.minMeaningfulChars === 'number' && Number.isFinite(src.minMeaningfulChars)) {
+    out.minMeaningfulChars = Math.min(50, Math.max(0, Math.floor(src.minMeaningfulChars)));
+  }
+  if (Array.isArray(src.blocklist)) {
+    out.blocklist = src.blocklist
+      .map((s) => String(s || '').trim())
+      .filter(Boolean)
+      .slice(0, 500);
+  } else if (typeof src.blocklist === 'string') {
+    out.blocklist = src.blocklist
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 500);
+  }
+  return out;
+}
+
 export function getWordSet(str: string): Set<string> {
   const words = str.toLowerCase().match(/\w+/g) || [];
   return new Set(words);
